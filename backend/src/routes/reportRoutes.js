@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {
   uploadReport,
+  reanalyzeReport,
   getReports,
   getReportById,
   deleteReport,
@@ -18,5 +19,7 @@ router.route('/')
 router.route('/:id')
   .get(getReportById)
   .delete(deleteReport);
+
+router.post('/:id/analyze', reanalyzeReport);
 
 module.exports = router;

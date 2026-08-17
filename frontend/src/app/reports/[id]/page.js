@@ -22,6 +22,7 @@ import {
   Trash2,
   ExternalLink,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -33,6 +34,8 @@ export default function ReportDetailPage() {
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState('romanUrdu'); // 'romanUrdu' | 'english'
   const [deleting, setDeleting] = useState(false);
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     fetchReportDetails();
@@ -49,6 +52,21 @@ export default function ReportDetailPage() {
       console.error('Failed to fetch report details:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReanalyze = async () => {
+    setReanalyzing(true);
+    setErrorMsg('');
+    try {
+      const res = await api.post(`/reports/${id}/analyze`);
+      if (res.data.success) {
+        setReport(res.data.report);
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Failed to analyze report with Gemini AI. Please try again.');
+    } finally {
+      setReanalyzing(false);
     }
   };
 
@@ -89,8 +107,9 @@ export default function ReportDetailPage() {
   }
 
   const insight = report.aiInsight;
-  const isPdf = report.fileType === 'application/pdf' || report.fileUrl.endsWith('.pdf');
+  const isPdf = report.fileType === 'application/pdf' || (report.fileUrl && report.fileUrl.endsWith('.pdf'));
   const abnormalValues = insight?.abnormalValues || [];
+  const hasInsight = !!insight && (!!insight.summaryRomanUrdu || !!insight.summaryEnglish);
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-4rem)]">
@@ -108,7 +127,20 @@ export default function ReportDetailPage() {
             <span>Back to Dashboard</span>
           </Link>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleReanalyze}
+              disabled={reanalyzing}
+              className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
+            >
+              {reanalyzing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5" />
+              )}
+              <span>{reanalyzing ? 'Analyzing with AI...' : 'Re-Analyze with Gemini AI'}</span>
+            </button>
+
             <LanguageToggle language={language} setLanguage={setLanguage} />
 
             <button
@@ -122,6 +154,13 @@ export default function ReportDetailPage() {
           </div>
         </div>
 
+        {errorMsg && (
+          <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between">
+            <span>{errorMsg}</span>
+            <button onClick={() => setErrorMsg('')} className="font-bold ml-2">✕</button>
+          </div>
+        )}
+
         {/* Report Overview Banner */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 transition-colors">
           <div className="space-y-2">
@@ -132,6 +171,11 @@ export default function ReportDetailPage() {
               {report.aiStatus === 'completed' && abnormalValues.length > 0 && (
                 <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80">
                   {abnormalValues.length} Attention Items
+                </span>
+              )}
+              {report.aiStatus === 'processing' && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/80">
+                  AI Analyzing...
                 </span>
               )}
             </div>
@@ -192,12 +236,39 @@ export default function ReportDetailPage() {
                   <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <h2>AI Summary ({language === 'romanUrdu' ? 'Roman Urdu' : 'English'})</h2>
                 </div>
+
+                {!hasInsight && (
+                  <button
+                    onClick={handleReanalyze}
+                    disabled={reanalyzing}
+                    className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center space-x-1"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Run AI Analysis</span>
+                  </button>
+                )}
               </div>
 
               <div className="p-4 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/40 text-slate-700 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-line">
-                {language === 'romanUrdu'
-                  ? (insight?.summaryRomanUrdu || 'AI explanation in Roman Urdu not available.')
-                  : (insight?.summaryEnglish || 'AI explanation in English not available.')}
+                {hasInsight ? (
+                  language === 'romanUrdu'
+                    ? (insight.summaryRomanUrdu || insight.summaryEnglish)
+                    : (insight.summaryEnglish || insight.summaryRomanUrdu)
+                ) : (
+                  <div className="space-y-3 py-2 text-center">
+                    <p className="text-slate-600 dark:text-slate-400 text-sm">
+                      AI analysis is ready to run on this document.
+                    </p>
+                    <button
+                      onClick={handleReanalyze}
+                      disabled={reanalyzing}
+                      className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all"
+                    >
+                      {reanalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      <span>{reanalyzing ? 'Analyzing with Gemini AI...' : 'Click to Generate AI Summary'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {insight?.keyFindings?.length > 0 && (
@@ -222,7 +293,7 @@ export default function ReportDetailPage() {
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm space-y-4 transition-colors">
                 <div className="flex items-center space-x-2 text-amber-800 dark:text-amber-300 font-bold text-base">
                   <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                  <h2>Abnormal / Flagged Values ({abnormalValues.length})</h2>
+                  <h2>Prescribed Medicines / Flagged Values ({abnormalValues.length})</h2>
                 </div>
 
                 <div className="space-y-3">
@@ -237,13 +308,15 @@ export default function ReportDetailPage() {
                             {item.testName}
                           </h4>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Normal Range: <span className="font-medium">{item.normalRange}</span>
+                            Dosage / Normal: <span className="font-medium">{item.normalRange}</span>
                           </p>
                         </div>
 
                         <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                          item.status === 'High'
+                          item.status === 'High' || item.status === 'Critical'
                             ? 'bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300'
+                            : item.status === 'Prescribed'
+                            ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
                             : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
                         }`}>
                           {item.observedValue} ({item.status})

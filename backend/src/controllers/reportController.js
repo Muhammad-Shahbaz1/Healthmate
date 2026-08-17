@@ -6,12 +6,10 @@ const { analyzeMedicalReport } = require('../services/geminiService');
 // Helper function to upload buffer to Cloudinary or create Data URL fallback
 const uploadToCloudinary = (buffer, mimetype) => {
   return new Promise((resolve, reject) => {
-    // If Cloudinary environment variables are not set or default placeholder
     if (
       !process.env.CLOUDINARY_CLOUD_NAME ||
       process.env.CLOUDINARY_CLOUD_NAME === 'your_cloudinary_cloud_name'
     ) {
-      // Fallback: Return data URI so testing works even without Cloudinary API keys
       const base64 = buffer.toString('base64');
       const dataUri = `data:${mimetype};base64,${base64}`;
       return resolve({
@@ -28,7 +26,6 @@ const uploadToCloudinary = (buffer, mimetype) => {
       (error, result) => {
         if (error) {
           console.warn('Cloudinary upload warning:', error.message);
-          // Fallback to data URI if Cloudinary fails
           const base64 = buffer.toString('base64');
           return resolve({
             secure_url: `data:${mimetype};base64,${base64}`,
@@ -44,7 +41,7 @@ const uploadToCloudinary = (buffer, mimetype) => {
 };
 
 // @desc    Upload report & run Gemini AI analysis
-// @route   POST /api/reports/upload
+// @route   POST /api/reports
 // @access  Private
 const uploadReport = async (req, res) => {
   try {
@@ -136,6 +133,96 @@ const uploadReport = async (req, res) => {
   }
 };
 
+// @desc    Re-analyze an existing report with Gemini AI
+// @route   POST /api/reports/:id/analyze
+// @access  Private
+const reanalyzeReport = async (req, res) => {
+  try {
+    const report = await Report.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
+
+    if (!report) {
+      return res.status(404).json({
+        success: false,
+        message: 'Report not found',
+      });
+    }
+
+    // Fetch file buffer from URL or DataURI
+    let buffer;
+    let mimeType = report.fileType || 'application/pdf';
+
+    if (report.fileUrl.startsWith('data:')) {
+      const parts = report.fileUrl.split(';base64,');
+      mimeType = parts[0].replace('data:', '');
+      buffer = Buffer.from(parts[1], 'base64');
+    } else {
+      const response = await fetch(report.fileUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download report file: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    }
+
+    // Run AI analysis
+    const aiResponse = await analyzeMedicalReport(
+      buffer,
+      mimeType,
+      { title: report.title, reportType: report.reportType }
+    );
+
+    if (!aiResponse.success) {
+      throw new Error('Gemini failed to generate analysis');
+    }
+
+    // Upsert AiInsight
+    let aiInsight = await AiInsight.findOne({ report: report._id });
+    if (!aiInsight) {
+      aiInsight = new AiInsight({
+        report: report._id,
+        user: req.user._id,
+      });
+    }
+
+    aiInsight.summaryEnglish = aiResponse.data.summaryEnglish;
+    aiInsight.summaryRomanUrdu = aiResponse.data.summaryRomanUrdu;
+    aiInsight.keyFindings = aiResponse.data.keyFindings || [];
+    aiInsight.abnormalValues = aiResponse.data.abnormalValues || [];
+    aiInsight.doctorQuestions = aiResponse.data.doctorQuestions || [];
+    aiInsight.foodsToEat = aiResponse.data.foodsToEat || [];
+    aiInsight.foodsToAvoid = aiResponse.data.foodsToAvoid || [];
+    aiInsight.homeRemedies = aiResponse.data.homeRemedies || [];
+    aiInsight.suggestedFollowUp = aiResponse.data.suggestedFollowUp || '';
+    aiInsight.disclaimer =
+      aiResponse.data.disclaimer ||
+      'Yeh AI sirf samajhne ke liye hai, ilaaj ke liye nahi.';
+    aiInsight.rawModelResponse = aiResponse.rawResponse;
+
+    await aiInsight.save();
+
+    report.aiStatus = 'completed';
+    report.aiInsight = aiInsight._id;
+    await report.save();
+
+    const populatedReport = await Report.findById(report._id).populate('aiInsight');
+
+    res.json({
+      success: true,
+      message: 'Report re-analyzed successfully by Gemini AI',
+      report: populatedReport,
+    });
+  } catch (error) {
+    console.error('Re-analysis error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to re-analyze report',
+    });
+  }
+};
+
 // @desc    Get all reports for user
 // @route   GET /api/reports
 // @access  Private
@@ -209,10 +296,8 @@ const deleteReport = async (req, res) => {
       });
     }
 
-    // Delete associated AI insight
     await AiInsight.deleteMany({ report: report._id });
 
-    // Delete Cloudinary asset if applicable
     if (report.cloudinaryPublicId && !report.cloudinaryPublicId.startsWith('local_')) {
       try {
         await cloudinary.uploader.destroy(report.cloudinaryPublicId);
@@ -234,6 +319,7 @@ const deleteReport = async (req, res) => {
 
 module.exports = {
   uploadReport,
+  reanalyzeReport,
   getReports,
   getReportById,
   deleteReport,
