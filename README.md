@@ -1,77 +1,42 @@
-# 💚 HealthMate – Sehat ka Smart Dost
-> An AI-powered personal health companion app using Google Gemini for reading, organizing, and explaining medical reports in **English** and **Roman Urdu**.
+# 🏥 **HealthMate – Sehat ka Smart Dost**
+> *AI-Powered Bilingual Medical Vault & Health Assistant*
 
 ---
 
-## 🌟 Key Features
-
-1. **AI Medical Report Reading (Gemini 1.5/Flash Multimodal)**:
-   - Upload PDFs, photos, or scanned lab reports (No manual OCR needed).
-   - Automatically detects and flags **Abnormal Values** (e.g. Hemoglobin low, WBC high).
-   - Generates bilingual explanations in **English** and conversational **Roman Urdu**.
-   - Provides **3-5 specific questions to ask your doctor**.
-   - Highlights **Foods to Eat** vs **Foods to Avoid** & safe **Home Remedies**.
-   - Includes safety **Medical Disclaimers**.
-
-2. **Manual Health Vitals Tracking**:
-   - Log daily BP (Systolic / Diastolic), Blood Sugar (Fasting / Random), Weight, and Pulse.
-
-3. **Unified Medical Timeline**:
-   - Chronologically tracks every prescription, test report, and health vital entry in a clean timeline.
-
-4. **Security & Privacy**:
-   - JWT-based authentication.
-   - Secure MongoDB storage and Cloudinary integration.
+### 📖 **Project Explanation**
+**HealthMate** ek smart AI health platform hai jo complex medical reports, prescriptions aur lab tests (PDF/Images) ko analyze karke aasan **Roman Urdu aur English** mein explain karta hai. Yeh users ko abnormal values, doctor se poochne wale sawalat, parhaiz aur diet tips provide karta hai, sath hi daily vitals track karne aur complete medical history organize karne ki suvidha deta hai.
 
 ---
 
-## 🛠️ Tech Stack
-
-- **Frontend**: Next.js 14, React 18, Tailwind CSS, Lucide Icons, Axios, Date-fns.
-- **Backend**: Node.js, Express.js, MongoDB / Mongoose, Multer, Cloudinary, JWT.
-- **AI Model**: Google Gemini API (`@google/generative-ai` multimodal).
+### 🖼️ **Preview**
+![HealthMate Preview](https://raw.githubusercontent.com/Muhammad-Shahbaz1/Healthmate/main/frontend/public/favicon.svg)
 
 ---
 
-## 🚀 How to Run Locally
-
-### 1. Backend Setup
-```bash
-cd backend
-npm install
-```
-Create a `.env` file in the `backend` folder (you can copy `.env.example`):
-```env
-PORT=5000
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/healthmate?retryWrites=true&w=majority
-JWT_SECRET=your_super_secret_jwt_key
-GEMINI_API_KEY=your_gemini_api_key_from_google_ai_studio
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-```
-
-Start the backend server:
-```bash
-npm run dev
-```
+### 💻 **Tech Stack**
+- **Frontend:** Next.js 14 (App Router), React, Tailwind CSS, Lucide Icons
+- **Backend:** Node.js, Express.js, REST APIs
+- **Database:** MongoDB Atlas (Mongoose ODM)
+- **AI Engine:** Google Gemini 3.5 / 3.7 Flash (Multimodal Vision & Document Intelligence)
+- **File Storage:** Cloudinary
+- **Authentication:** JWT (JSON Web Tokens) & Bcrypt
+- **Deployment:** Vercel (Frontend) + Railway (Backend)
 
 ---
 
-### 2. Frontend Setup
-```bash
-cd frontend
-npm install
-```
+### ✨ **Important Features**
+- 📄 **Multimodal Medical Report Analysis:** PDF aur Images se medical data extract karke accurate wazahat.
+- 🗣️ **Bilingual Output (Dual Language):** Roman Urdu aur English mein aasan summary aur explanations.
+- ⚠️ **Abnormal Values & Dosage Detection:** High/Low test results aur medicines ki automatic identification aur visual flags.
+- ❓ **Doctor Consultation Questions:** Har report ke mutabiq doctor se poochne ke liye 3 customized sawalat.
+- 🥗 **Diet & Home Remedies:** Marz/report ke hisab se kya khayein aur kin cheezon se parhaiz karein.
+- 📊 **Vitals Tracker & Timeline:** Blood Pressure, Sugar, Heart Rate log karna aur health history timeline view.
+- 🌓 **Day & Night Mode:** Smooth Dark/Light mode theme toggle.
+- 🔒 **Secure Auth & Privacy:** Password show/hide toggle aur JWT protected personal medical vault.
 
-Create a `.env.local` file in `frontend`:
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
-```
+---
 
-Start the Next.js development server:
-```bash
-npm run dev
-```
+### 🔗 **Live Demo & Source Code**
 
-Open [http://localhost:3000](http://localhost:3000) in your browser!
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-frontend--nine--bice--20.vercel.app-0070f3?style=for-the-badge&logo=vercel&logoColor=white)](https://frontend-nine-bice-20.vercel.app)
+[![GitHub Source Code](https://img.shields.io/badge/💻_GitHub_Repository-Muhammad--Shahbaz1%2FHealthmate-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Muhammad-Shahbaz1/Healthmate)
